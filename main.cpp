@@ -1,4 +1,4 @@
-#include <hip/hip_runtime.h>
+#include "hip/hip_runtime.h"
 #include <iostream>
 
 #define HIP_CHECK(command) {                                                            \
