@@ -28,7 +28,7 @@ int main() {
     HIP_CHECK(hipMemcpy(d_a, h_a, buffer_size, hipMemcpyHostToDevice));
     dim3 work_group_count = dim3((N+256-1)/256, 1, 1);
     dim3 work_group_size = dim3(256, 1, 1);
-    hipLaunchKernelGGL(my_kernel, work_group_count, work_group_size, 0, 0, d_a);
+    hipLaunchKernelGGL(my_kernel, work_group_count, work_group_size, 0, 0, N, d_a);
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipMemcpy(h_a, d_a, buffer_size, hipMemcpyDeviceToHost));
 
