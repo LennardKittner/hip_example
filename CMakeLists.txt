@@ -2,11 +2,14 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(hip_example VERSION 1.0.0 LANGUAGES CXX)
+set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
 # Find Modules
+set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake")
 find_package(HIP MODULE REQUIRED)
 
 # Set compilation standard
+set(CMAKE_CXX_COMPILER "/opt/rocm/hip/bin/hipcc")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

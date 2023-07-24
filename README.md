@@ -1,17 +1,17 @@
 # hip_example
 A simple hip example programm.
 
-## Building
+## Manuel Building
 
 ```
 hipcc -o hip_example main.cpp
 ```
 
-### cmake
+### Building With Cmake
 ```
 mkdrid build
 cd build
-cmake -DCMAKE_MODULE_PATH=/opt/rocm/hip/cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+cmake ..
 ```
 
 ## Errors
