@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(hip_example VERSION 1.0.0 LANGUAGES CXX)
-set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+set(CMAKE_BUILD_TYPE "Debug")
 
 # Find Modules
 set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake")

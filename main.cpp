@@ -4,14 +4,14 @@
 #define HIP_CHECK(command) {                                                            \
     hipError_t status = command;                                                        \
     if (status != hipSuccess) {                                                         \
-        std::cerr << "Error: HIP reports" << hipGetErrorString(status) << std::endl;    \
+        std::cerr << "Error: HIP reports " << hipGetErrorString(status) << std::endl;    \
         std::abort();                                                                   \
     }                                                                                   \
 }                                                                                       \
 
 __global__ void my_kernel(int N, double *d_a) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
-    if (i < N) {
+     if (i < N) {
         d_a[i] *= 2;
     }
 }
@@ -32,8 +32,14 @@ int main() {
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipMemcpy(h_a, d_a, buffer_size, hipMemcpyDeviceToHost));
 
+    int sum = 0;
     for (int i = 0; i < N; i++) {
-        std::cout << h_a[i] << std::endl;
+        sum += i;
+    }
+    if (sum == N*(N-1)/2) {
+        std::cout << "PASSED" << std::endl;
+    } else {
+        std::cout << "FAILED sum is " << sum << std::endl;
     }
 
     free(h_a);
