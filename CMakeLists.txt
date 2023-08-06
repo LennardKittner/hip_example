@@ -5,11 +5,26 @@ project(hip_example VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_BUILD_TYPE "Debug")
 
 # Find Modules
-set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake")
-find_package(HIP MODULE REQUIRED)
+if (NOT DEFINED ROCM_PATH)
+     set ( ROCM_PATH "/opt/rocm"  CACHE STRING "Default ROCM installation directory." )
+endif ()
+
+# Search for rocm in common locations
+list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/hip ${ROCM_PATH})
+
+set(HIP_PLATFORM "$ENV{GPU_PLATFORM}")
+
+# Find hip
+if(${HIP_PLATFORM} MATCHES "nvidia")
+  set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake")
+  find_package(HIP MODULE REQUIRED)
+else()
+  find_package(hip)
+endif()
 
 # Set compilation standard
-set(CMAKE_CXX_COMPILER "/opt/rocm/hip/bin/hipcc")
+set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
+set(CMAKE_CXX_LINKER   ${HIP_HIPCC_EXECUTABLE})
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -19,19 +34,16 @@ if(${HIP_PLATFORM} MATCHES "nvidia")
   message(STATUS "HIP_PLATFORM: nvidia")
   find_package(CUDAToolkit REQUIRED)
   set(CMAKE_CUDA_ARCHITECTURES "70;75")
-else()
-  message(STATUS "HIP_PLATFORM: amd")
-  set(CMAKE_HIP_ARCHITECTURES "gfx906;gfx908")
 endif()
 
 # Test programs
 add_executable(hip_example main.cpp)
+message("env is ${HIP_PLATFORM}")
 if(${HIP_PLATFORM} MATCHES "nvidia")
   message(STATUS "link to CUDA::cudart")
   target_compile_definitions(hip_example PRIVATE __HIP_PLATFORM_NVIDIA__)
   target_link_libraries(hip_example PRIVATE CUDA::cudart)
 else()
   message(STATUS "link to hip::device")
-  target_compile_definitions(hip_example PRIVATE __HIP_PLATFORM_AMD__)
-  target_link_libraries(hip_example PRIVATE hip::device)
+  target_link_libraries(hip_example hip::host)
 endif()
