@@ -43,3 +43,6 @@ ENV PATH="/cmake/bin:/opt/rocm/bin:${PATH}"
 
 RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
     && ldconfig
+
+# Install Debugger
+RUN apt install rocm-developer-tools
