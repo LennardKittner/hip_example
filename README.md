@@ -10,7 +10,7 @@ hipcc -o hip_example main.cpp
 
 ### Building With Cmake
 
-If you are using a nvidia gpu first set the `GPU_PLATFORM`
+If you are using a nvidia gpu you may have to first set the `GPU_PLATFORM`
 ```
 export GPU_PLATFORM=nvidia
 ```
@@ -20,10 +20,18 @@ mkdrid build
 cd build
 cmake ..
 ```
+or
+```
+rm -rf build && cmake -B build && cmake --build build && ./build/hip_example
+```
+
+The environment variables in the environment_nvidia file can help to solve some issues but you should first try to build **without** them.
+
+## Useful Information About HIP
 
 ## Errors
 
-If you get the error 
+If you encounter the error 
 ```
  error: cannot find ROCm device library; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device librar
 ```
@@ -31,4 +39,13 @@ set the `HIP_PLATFORM` to nvidia or amd
 ```
 export HIP_PLATFORM=nvidia
 export HIP_PLATFORM=amd
+```
+
+If you encounter the error
+```
+nvcc fatal   : Unknown option '-Wl,-rpath,/usr/local/cuda-12.2/targets/x86_64-linux/lib'
+```
+unset the `HIP_PLATFORM` environment variable
+```
+unset HIP_PLATFORM
 ```
