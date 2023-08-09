@@ -20,6 +20,8 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     vulkan-validationlayers \
     libglfw3-dev \
     gfortran \
+    vim \
+    nano \
     # Nvidia driver version needed for hipSOLVER's CUDA backend.
     # See https://docs.nvidia.com/deploy/cuda-compatibility/index.html#default-to-minor-version.
     nvidia-driver-455 \

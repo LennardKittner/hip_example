@@ -19,6 +19,8 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     libvulkan-dev \
     vulkan-validationlayers \
     libglfw3-dev \
+    vim \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LANG en_US.utf8
