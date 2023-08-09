@@ -29,6 +29,28 @@ The environment variables in the environment_nvidia file can help to solve some 
 
 ## Useful Information About HIP
 
+## Introduction
+https://www.youtube.com/watch?v=3ZXbRJVvgJs
+
+## Atomics
+https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html#atomic-functions
+
+## Synchronization
+https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html#warp-cross-lane-functions
+
+https://rocm.docs.amd.com/projects/rocPRIM/en/latest/intrinsics.html#synchronization
+
+https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html#memory-fence-instructions
+
+## Definitions
+
+**Wavefront** 
+on nvidia 32 lanes
+on amd 64 lanes
+
+**Block** 
+Same as a openCL workgroup contains multiple Wavefronts.
+
 ## Errors
 
 If you encounter the error 

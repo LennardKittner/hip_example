@@ -6,7 +6,7 @@
 
 **Install Nvidia driver** You can check with `nvidia-smi` whether drivers are already installed.
 
-**Install nvidia-docker2** `dnf install nvidia-docker2` `yay -Sy nvidia-docker`
+**Install nvidia-docker2** e.g. `dnf install nvidia-docker2` or `yay -Sy nvidia-docker`
 
 ## Build Image
 
