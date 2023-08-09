@@ -12,7 +12,11 @@ endif ()
 # Search for rocm in common locations
 list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/hip ${ROCM_PATH})
 
-set(HIP_PLATFORM "$ENV{GPU_PLATFORM}")
+if (DEFINED ENV{GPU_PLATFORM})
+    set(HIP_PLATFORM "$ENV{GPU_PLATFORM}")
+elseif (DEFINED ENV{NVIDIA_DRIVER_CAPABILITIES})
+    set(HIP_PLATFORM "nvidia")
+endif()
 
 # Find hip
 if(${HIP_PLATFORM} MATCHES "nvidia")
