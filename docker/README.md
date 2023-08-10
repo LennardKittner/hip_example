@@ -47,5 +47,5 @@ When creating a new container you have to pass through the GPU this is done usin
 
 **Example**
 ```
-docker run -it --device=/dev/kfd --device=/dev/dri --name rocm_docker_2 --network host hip_docker /bin/bash
+docker run -it --device=/dev/kfd --device=/dev/dri --name hip_docker --network host hip_amd /bin/bash
 ```
