@@ -8,7 +8,7 @@ A simple hip example programm.
 hipcc -o hip_example main.cpp
 ```
 
-### Building With Cmake
+## Building With Cmake
 
 If you are using a nvidia gpu you may have to first set the `GPU_PLATFORM`
 ```
@@ -19,6 +19,7 @@ Then build with
 mkdrid build
 cd build
 cmake ..
+make
 ```
 or
 ```
@@ -27,22 +28,25 @@ rm -rf build && cmake -B build && cmake --build build && ./build/hip_example
 
 The environment variables in the environment_nvidia file can help to solve some issues but you should first try to build **without** them.
 
+## Executables
+This repository includes two test executables `memory` and `hip_example`.
+
 ## Useful Information About HIP
 
-## Introduction
+### Introduction
 https://www.youtube.com/watch?v=3ZXbRJVvgJs
 
-## Atomics
+### Atomics
 https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html#atomic-functions
 
-## Synchronization
+### Synchronization
 https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html#warp-cross-lane-functions
 
 https://rocm.docs.amd.com/projects/rocPRIM/en/latest/intrinsics.html#synchronization
 
 https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html#memory-fence-instructions
 
-## Definitions
+### Definitions
 
 **Wavefront** 
 on nvidia 32 lanes

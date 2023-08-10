@@ -40,8 +40,8 @@ if(${HIP_PLATFORM} MATCHES "nvidia")
   set(CMAKE_CUDA_ARCHITECTURES "70;75")
 endif()
 
-# Test programs
-add_executable(hip_example main.cpp)
+# Basic test programm
+add_executable(hip_example example.cpp)
 message("env is ${HIP_PLATFORM}")
 if(${HIP_PLATFORM} MATCHES "nvidia")
   message(STATUS "link to CUDA::cudart")
@@ -50,4 +50,16 @@ if(${HIP_PLATFORM} MATCHES "nvidia")
 else()
   message(STATUS "link to hip::device")
   target_link_libraries(hip_example hip::host)
+endif()
+
+# Memmory mapped file test
+add_executable(memory memory.cpp)
+message("env is ${HIP_PLATFORM}")
+if(${HIP_PLATFORM} MATCHES "nvidia")
+  message(STATUS "link to CUDA::cudart")
+  target_compile_definitions(memory PRIVATE __HIP_PLATFORM_NVIDIA__)
+  target_link_libraries(memory PRIVATE CUDA::cudart)
+else()
+  message(STATUS "link to hip::device")
+  target_link_libraries(memory hip::host)
 endif()
