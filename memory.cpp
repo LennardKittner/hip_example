@@ -9,12 +9,12 @@
 
 namespace fs = std::filesystem;
 
-#define HIP_CHECK(command) {                                                            \
-    hipError_t status = command;                                                        \
-    if (status != hipSuccess) {                                                         \
+#define HIP_CHECK(command) {                                                                                  \
+    hipError_t status = command;                                                                              \
+    if (status != hipSuccess) {                                                                               \
         std::cerr << "Error at " << __LINE__ << ": HIP reports " << hipGetErrorString(status) << std::endl;   \
-        std::abort();                                                                   \
-    }                                                                                   \
+        std::abort();                                                                                         \
+    }                                                                                                         \
 }
 
 __global__ void mem_set(int lanes, int *to) {
@@ -26,16 +26,6 @@ __global__ void mem_set(int lanes, int *to) {
 }
 
 int main(int argc, char **argv) {
-    int managed_memory = 0;
-    int device;
-    HIP_CHECK(hipGetDevice(&device));
-
-    HIP_CHECK(hipDeviceGetAttribute(&managed_memory, hipDeviceAttributeManagedMemory, device));
-
-    if (!managed_memory ) {
-        std::cerr << "Managed memory access not supported on the device" << device << std::endl;
-        return 1;
-    }
     if (argc != 2) {
         std::cerr << "No to file provided" << std::endl;
         return 1;
@@ -61,15 +51,15 @@ int main(int argc, char **argv) {
     }
 
     void *gpu_mapping;
-    HIP_CHECK(hipMallocManaged(&gpu_mapping, to_size));
-
-    void *to_mapping = mmap(gpu_mapping, to_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, fd_to, 0);
+    void *to_mapping = mmap(nullptr, to_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_to, 0);
     if (to_mapping == MAP_FAILED) {
-        std::cerr << "Failed to mmap: " << to << std::endl;
+        std::cerr << "Failed to mmap: " << strerror(errno) << std::endl;
         close(fd_to);
-        HIP_CHECK(hipFree(gpu_mapping));
         return 1;
     }
+
+    HIP_CHECK(hipHostRegister(to_mapping, to_size, 0)); //0x02
+    HIP_CHECK(hipHostGetDevicePointer(&gpu_mapping, to_mapping, 0));
 
     std::cout << "device: " << gpu_mapping << std::endl;
     std::cout << "host: " << to_mapping << std::endl;
@@ -83,6 +73,5 @@ int main(int argc, char **argv) {
     hipLaunchKernelGGL(mem_set, work_group_count, work_group_size, 0, 0, lanes, to_data);
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipDeviceSynchronize());
-    HIP_CHECK(hipFree(gpu_mapping));
     return 0;
 }
