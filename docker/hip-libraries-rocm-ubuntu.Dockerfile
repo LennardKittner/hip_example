@@ -31,7 +31,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     && apt-get update -qq \
     && apt-get install -y ./amdgpu-install_5.3.50300-1_all.deb \
     && rm ./amdgpu-install_5.3.50300-1_all.deb \
-    && amdgpu-install -y --usecase=hiplibsdk --no-dkms \
+    && amdgpu-install -y --usecase=rocm --no-dkms \
     && apt-get install -y libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,6 +45,3 @@ ENV PATH="/cmake/bin:/opt/rocm/bin:${PATH}"
 
 RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
     && ldconfig
-
-# Install Debugger
-RUN apt install rocm-developer-tools
