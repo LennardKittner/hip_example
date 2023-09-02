@@ -17,14 +17,6 @@ namespace fs = std::filesystem;
     }                                                                                                         \
 }
 
-__global__ void mem_set(int lanes, int *to) {
-    int global = threadIdx.x + blockIdx.x * blockDim.x;
-    if (global < lanes) {
-        printf("lane: %d content: %d \n", global, to[global]);
-        to[global] = global;
-    }
-}
-
 struct memset_cmdlist {
     size_t size;
     size_t num_groups;
@@ -50,10 +42,29 @@ __global__ void kernel_memset(memset_cmdlist *args, size_t *to) {
             to[global * elements_per_lane + i] = args->pattern;
         }
     }
-    atomicAdd_system(&args->done, 1);
+    // atomicAdd_system(&args->done, 1); // ~20ms for 256 lanes or ~7% for 512MB
 }
 
-void memset_with_timing(memset_cmdlist *args, size_t *to, hipStream_t *stream) {
+__global__ void kernel_memset_loop(memset_cmdlist *args, size_t *to, int repeat) {
+    for (int i = 0; i < repeat; i++) {
+        int global = threadIdx.x + blockIdx.x * blockDim.x;
+        size_t elements = args->size / sizeof(size_t); // size is rounded down to a multiple of sizeof(size_t)
+        if (elements < args->num_groups * args->num_lanes_per_group) {
+            if (global < elements) {
+                to[global] = args->pattern;
+            }
+        } else {
+            size_t elements_per_lane = elements / (args->num_groups * args->num_lanes_per_group); // elements is rounded down to a multiple of elements_per_lane
+            for (size_t i = 0; i < elements_per_lane; i++) {
+                to[global * elements_per_lane + i] = args->pattern;
+            }
+        }
+    }
+    // atomicAdd_system(&args->done, 1); // ~20ms for 256 lanes or ~7% for 512MB
+}
+
+// only submit the kernel one time and loop on the gpu
+void memset_with_timing_loop_on_gpu(memset_cmdlist *args, size_t *to, hipStream_t *stream, int repeats_kernel) {
     // events for timing
     hipEvent_t start;
     hipEvent_t end_cpy_h_d;
@@ -73,9 +84,9 @@ void memset_with_timing(memset_cmdlist *args, size_t *to, hipStream_t *stream) {
     HIP_CHECK(hipMemcpyAsync(device_data, args, sizeof(memset_cmdlist), hipMemcpyHostToDevice, *stream));
     HIP_CHECK(hipEventRecord(end_cpy_h_d, *stream));
     // start kernel
-    hipLaunchKernelGGL(kernel_memset, work_group_count, work_group_size, 0, *stream, device_data,to);
+    hipLaunchKernelGGL(kernel_memset_loop, work_group_count, work_group_size, 0, *stream, device_data,to, repeats_kernel);
+    // HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipEventRecord(end_kernel, *stream));
-    HIP_CHECK(hipGetLastError());
     // copy data from device
     HIP_CHECK(hipMemcpyAsync(args, device_data, sizeof(memset_cmdlist), hipMemcpyDeviceToHost, *stream))
     HIP_CHECK(hipEventRecord(end_cpy_d_h, *stream));
@@ -90,7 +101,56 @@ void memset_with_timing(memset_cmdlist *args, size_t *to, hipStream_t *stream) {
     HIP_CHECK(hipEventElapsedTime(&time2, end_cpy_h_d, end_kernel));
     HIP_CHECK(hipEventElapsedTime(&time3, end_kernel, end_cpy_d_h));
     std::cout << "time copy host device: " << time1 << "ms" << std::endl;
-    std::cout << "time memset: " << time2 << "ms" << std::endl;
+    std::cout << "time memset: " << time2 / repeats_kernel << "ms" << std::endl;
+    std::cout << "time copy device host: " << time3 << "ms" << std::endl;
+    std::cout << "total time: " << time1 + time2 + time3 << "ms" << std::endl;
+    HIP_CHECK(hipEventDestroy(start))
+    HIP_CHECK(hipEventDestroy(end_cpy_h_d))
+    HIP_CHECK(hipEventDestroy(end_kernel))
+    HIP_CHECK(hipEventDestroy(end_cpy_d_h))
+}
+
+// submit multiple kernel single stream
+void memset_with_timing_multi_kernel(memset_cmdlist *args, size_t *to, hipStream_t *stream, int repeats_kernel) {
+    // events for timing
+    hipEvent_t start;
+    hipEvent_t end_cpy_h_d;
+    hipEvent_t end_kernel;
+    hipEvent_t end_cpy_d_h;
+    HIP_CHECK(hipEventCreate(&start));
+    HIP_CHECK(hipEventCreate(&end_cpy_h_d));
+    HIP_CHECK(hipEventCreate(&end_kernel));
+    HIP_CHECK(hipEventCreate(&end_cpy_d_h));
+
+    dim3 work_group_count = dim3(args->num_groups, 1, 1);
+    dim3 work_group_size = dim3(args->num_lanes_per_group, 1, 1);
+    // copy data to device
+    memset_cmdlist *device_data;
+    HIP_CHECK(hipEventRecord(start, *stream));
+    HIP_CHECK(hipMalloc(&device_data, sizeof(memset_cmdlist)));
+    HIP_CHECK(hipMemcpyAsync(device_data, args, sizeof(memset_cmdlist), hipMemcpyHostToDevice, *stream));
+    HIP_CHECK(hipEventRecord(end_cpy_h_d, *stream));
+    // start kernel
+    for (int i = 0; i < repeats_kernel; i++) {
+        hipLaunchKernelGGL(kernel_memset, work_group_count, work_group_size, 0, *stream, device_data,to);
+        // HIP_CHECK(hipGetLastError());
+    }
+    HIP_CHECK(hipEventRecord(end_kernel, *stream));
+    // copy data from device
+    HIP_CHECK(hipMemcpyAsync(args, device_data, sizeof(memset_cmdlist), hipMemcpyDeviceToHost, *stream))
+    HIP_CHECK(hipEventRecord(end_cpy_d_h, *stream));
+    //TODO: free mem on device
+    HIP_CHECK(hipStreamSynchronize(*stream));
+    HIP_CHECK(hipFree(device_data));
+    // read timings
+    float time1;
+    float time2;
+    float time3;
+    HIP_CHECK(hipEventElapsedTime(&time1, start, end_cpy_h_d));
+    HIP_CHECK(hipEventElapsedTime(&time2, end_cpy_h_d, end_kernel));
+    HIP_CHECK(hipEventElapsedTime(&time3, end_kernel, end_cpy_d_h));
+    std::cout << "time copy host device: " << time1 << "ms" << std::endl;
+    std::cout << "time memset: " << time2 / repeats_kernel << "ms" << std::endl;
     std::cout << "time copy device host: " << time3 << "ms" << std::endl;
     std::cout << "total time: " << time1 + time2 + time3 << "ms" << std::endl;
     HIP_CHECK(hipEventDestroy(start))
@@ -146,6 +206,10 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
+    int repeats = 100;
+    if (argc >= 4) {
+        repeats = std::strtoul(argv[3], nullptr, 10);
+    }
 
     void *gpu_mapping;
     void *to_mapping = mmap(nullptr, to_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_to, 0);
@@ -164,18 +228,24 @@ int main(int argc, char **argv) {
     close(fd_to);
 
     // execute memset
-    hipStream_t main_stream;
-    HIP_CHECK(hipStreamCreate(&main_stream));
+    hipStream_t main_stream_1;
+    HIP_CHECK(hipStreamCreate(&main_stream_1));
     memset_cmdlist* cmd;
     HIP_CHECK(hipHostMalloc(&cmd, sizeof(memset_cmdlist)));
     *cmd = memset_cmdlist(to_size, 4, 64, 0xabcdef12);
     size_t *to_mapping_gpu = static_cast<size_t*>(gpu_mapping);
-    memset_with_timing(cmd, to_mapping_gpu, &main_stream);
-    HIP_CHECK(hipStreamSynchronize(main_stream));
-    std::cout << "done: " << cmd->done << std::endl;
+    std::cout << "loop kernel on single stream" << std::endl;
+    memset_with_timing_multi_kernel(cmd, to_mapping_gpu, &main_stream_1, repeats);
+    HIP_CHECK(hipStreamSynchronize(main_stream_1));
+    hipStream_t main_stream_2;
+    HIP_CHECK(hipStreamCreate(&main_stream_2));
+    std::cout << "loop inside kernel" << std::endl;
+    memset_with_timing_loop_on_gpu(cmd, to_mapping_gpu, &main_stream_2, repeats);
+    HIP_CHECK(hipStreamSynchronize(main_stream_2));
 
     // clean up
-    HIP_CHECK(hipStreamDestroy(main_stream));
+    HIP_CHECK(hipStreamDestroy(main_stream_1));
+    HIP_CHECK(hipStreamDestroy(main_stream_2));
     HIP_CHECK(hipHostFree(cmd));
     HIP_CHECK(hipHostUnregister(to_mapping));
     if (!munmap(to_mapping, to_size)) {
