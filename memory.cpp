@@ -118,9 +118,7 @@ void memset_with_timing(int mode, Memset_cmdlist *args, size_t *to, hipStream_t 
     // copy data from device
     HIP_CHECK(hipMemcpyAsync(args, device_data, sizeof(Memset_cmdlist), hipMemcpyDeviceToHost, *stream))
     HIP_CHECK(hipEventRecord(end_cpy_d_h, *stream));
-    //TODO: free mem on device
     HIP_CHECK(hipStreamSynchronize(*stream));
-    HIP_CHECK(hipFree(device_data));
     // read timings
     float time1;
     float time2;
@@ -134,6 +132,7 @@ void memset_with_timing(int mode, Memset_cmdlist *args, size_t *to, hipStream_t 
     std::cout << "time copy device host: " << time3 << "ms" << std::endl;
     std::cout << "total time: " << time1 + time2 + time3 << "ms" << std::endl;
     std::cout << "bandwidth: " << bandwidth << "GB/s" << std::endl;
+    HIP_CHECK(hipFree(device_data));
     HIP_CHECK(hipEventDestroy(start))
     HIP_CHECK(hipEventDestroy(end_cpy_h_d))
     HIP_CHECK(hipEventDestroy(end_kernel))
