@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <filesystem>
+#include "Memset_cmdlist.h"
 
 namespace fs = std::filesystem;
 
@@ -17,19 +18,13 @@ namespace fs = std::filesystem;
     }                                                                                                         \
 }
 
-struct memset_cmdlist {
-    size_t size;
-    size_t num_groups;
-    size_t num_lanes_per_group;
-    size_t pattern;
-    int done;
-    int error;
+#define HIP_PASS_ON(command) {                                                                                \
+    if (command != hipSuccess) {                                                                              \
+        return command;                                                                                       \
+    }                                                                                                         \
+}
 
-    memset_cmdlist(size_t size, size_t num_groups, size_t num_lanes_per_group, size_t pattern)
-        : size(size), num_groups(num_groups), num_lanes_per_group(num_lanes_per_group), pattern(pattern), done(0), error(0) {}
-};
-
-__global__ void kernel_memset(memset_cmdlist *args, size_t *to) {
+__global__ void kernel_memset(Memset_cmdlist *args, size_t *to) {
     int global = threadIdx.x + blockIdx.x * blockDim.x;
     size_t elements = args->size / sizeof(size_t); // size is rounded down to a multiple of sizeof(size_t)
     if (elements < args->num_groups * args->num_lanes_per_group) {
@@ -45,7 +40,7 @@ __global__ void kernel_memset(memset_cmdlist *args, size_t *to) {
     // atomicAdd_system(&args->done, 1); // ~20ms for 256 lanes or ~7% for 512MB
 }
 
-__global__ void kernel_memset_loop(memset_cmdlist *args, size_t *to, int repeat) {
+__global__ void kernel_memset_loop(Memset_cmdlist *args, size_t *to, int repeat) {
     for (int i = 0; i < repeat; i++) {
         int global = threadIdx.x + blockIdx.x * blockDim.x;
         size_t elements = args->size / sizeof(size_t); // size is rounded down to a multiple of sizeof(size_t)
@@ -63,9 +58,35 @@ __global__ void kernel_memset_loop(memset_cmdlist *args, size_t *to, int repeat)
     // atomicAdd_system(&args->done, 1); // ~20ms for 256 lanes or ~7% for 512MB
 }
 
+Memset_cmdlist::Memset_cmdlist(size_t size, size_t num_groups, size_t num_lanes_per_group, size_t pattern)
+    : size(size), num_groups(num_groups), num_lanes_per_group(num_lanes_per_group), pattern(pattern), done(0), error(0), device_pointer(nullptr) {}
+
+hipError_t Memset_cmdlist::destroy() {
+    HIP_PASS_ON(hipFree(device_pointer));
+    return hipSuccess;
+}
+
+hipError_t Memset_cmdlist::memset(size_t *to, hipStream_t *stream) {
+    dim3 work_group_count = dim3(num_groups, 1, 1);
+    dim3 work_group_size = dim3(num_lanes_per_group, 1, 1);
+    
+    if (device_pointer == nullptr) {
+        HIP_PASS_ON(hipMalloc(&device_pointer, sizeof(Memset_cmdlist)));
+    }
+
+    // copy data to device
+    HIP_PASS_ON(hipMemcpyAsync(device_pointer, this, sizeof(Memset_cmdlist), hipMemcpyHostToDevice, *stream));
+    // start kernel
+    hipLaunchKernelGGL(kernel_memset, work_group_count, work_group_size, 0, *stream, device_pointer,to);
+    HIP_PASS_ON(hipGetLastError());
+    // copy data from device
+    HIP_PASS_ON(hipMemcpyAsync(this, device_pointer, sizeof(Memset_cmdlist), hipMemcpyDeviceToHost, *stream));
+    return hipSuccess;
+}
+
 // mode == 0 => submit multiple kernel single stream
 // mode == 1 => only submit the kernel one time and loop on the gpu
-void memset_with_timing(int mode, memset_cmdlist *args, size_t *to, hipStream_t *stream, int repeats_kernel, size_t size) {
+void memset_with_timing(int mode, Memset_cmdlist *args, size_t *to, hipStream_t *stream, int repeats_kernel, size_t size) {
     // events for timing
     hipEvent_t start;
     hipEvent_t end_cpy_h_d;
@@ -79,10 +100,10 @@ void memset_with_timing(int mode, memset_cmdlist *args, size_t *to, hipStream_t 
     dim3 work_group_count = dim3(args->num_groups, 1, 1);
     dim3 work_group_size = dim3(args->num_lanes_per_group, 1, 1);
     // copy data to device
-    memset_cmdlist *device_data;
+    Memset_cmdlist *device_data;
     HIP_CHECK(hipEventRecord(start, *stream));
-    HIP_CHECK(hipMalloc(&device_data, sizeof(memset_cmdlist)));
-    HIP_CHECK(hipMemcpyAsync(device_data, args, sizeof(memset_cmdlist), hipMemcpyHostToDevice, *stream));
+    HIP_CHECK(hipMalloc(&device_data, sizeof(Memset_cmdlist)));
+    HIP_CHECK(hipMemcpyAsync(device_data, args, sizeof(Memset_cmdlist), hipMemcpyHostToDevice, *stream));
     HIP_CHECK(hipEventRecord(end_cpy_h_d, *stream));
     // start kernel
     if (mode == 0) {
@@ -95,7 +116,7 @@ void memset_with_timing(int mode, memset_cmdlist *args, size_t *to, hipStream_t 
     }
     HIP_CHECK(hipEventRecord(end_kernel, *stream));
     // copy data from device
-    HIP_CHECK(hipMemcpyAsync(args, device_data, sizeof(memset_cmdlist), hipMemcpyDeviceToHost, *stream))
+    HIP_CHECK(hipMemcpyAsync(args, device_data, sizeof(Memset_cmdlist), hipMemcpyDeviceToHost, *stream))
     HIP_CHECK(hipEventRecord(end_cpy_d_h, *stream));
     //TODO: free mem on device
     HIP_CHECK(hipStreamSynchronize(*stream));
@@ -117,23 +138,6 @@ void memset_with_timing(int mode, memset_cmdlist *args, size_t *to, hipStream_t 
     HIP_CHECK(hipEventDestroy(end_cpy_h_d))
     HIP_CHECK(hipEventDestroy(end_kernel))
     HIP_CHECK(hipEventDestroy(end_cpy_d_h))
-}
-
-void memset(memset_cmdlist *args, size_t *to, hipStream_t *stream) {
-    dim3 work_group_count = dim3(args->num_groups, 1, 1);
-    dim3 work_group_size = dim3(args->num_lanes_per_group, 1, 1);
-
-    // copy data to device
-    memset_cmdlist *device_data;
-    HIP_CHECK(hipMalloc(&device_data, sizeof(memset_cmdlist)));
-    HIP_CHECK(hipMemcpyAsync(device_data, args, sizeof(memset_cmdlist), hipMemcpyHostToDevice, *stream));
-    // start kernel
-    hipLaunchKernelGGL(kernel_memset, work_group_count, work_group_size, 0, *stream, device_data,to);
-    HIP_CHECK(hipGetLastError());
-    // copy data from device
-    HIP_CHECK(hipMemcpyAsync(args, device_data, sizeof(memset_cmdlist), hipMemcpyDeviceToHost, *stream))
-    //TODO: free mem on device
-    //Maybe include device mem in args and free if args is freed
 }
 
 // args: to_file file_size
@@ -188,10 +192,14 @@ int main(int argc, char **argv) {
     close(fd_to);
 
     // execute memset
-    memset_cmdlist* cmd;
-    HIP_CHECK(hipHostMalloc(&cmd, sizeof(memset_cmdlist)));
-    *cmd = memset_cmdlist(to_size, 4, 64, 0xabcdef12);
+    Memset_cmdlist* cmd;
+    HIP_CHECK(hipHostMalloc(&cmd, sizeof(Memset_cmdlist)));
+    *cmd = Memset_cmdlist(to_size, 4, 64, 0xabcdef12);
     size_t *to_mapping_gpu = static_cast<size_t*>(gpu_mapping);
+
+    hipStream_t main_stream;
+    HIP_CHECK(hipStreamCreate(&main_stream));
+    HIP_CHECK(cmd->memset(to_mapping_gpu, &main_stream));
 
     hipStream_t main_stream_1;
     HIP_CHECK(hipStreamCreate(&main_stream_1));
@@ -206,12 +214,14 @@ int main(int argc, char **argv) {
     HIP_CHECK(hipStreamSynchronize(main_stream_2));
 
     // clean up
+    HIP_CHECK(hipStreamDestroy(main_stream));
     HIP_CHECK(hipStreamDestroy(main_stream_1));
     HIP_CHECK(hipStreamDestroy(main_stream_2));
+    HIP_CHECK(cmd->destroy());
     HIP_CHECK(hipHostFree(cmd));
     HIP_CHECK(hipHostUnregister(to_mapping));
     if (!munmap(to_mapping, to_size)) {
         std::cerr << "Failed to munmap: " << strerror(errno) << std::endl;
-    } //TODO:  No such file or directory. Why?
+    } //TODO:   Operation not permitted. Why?
     return 0;
 }
