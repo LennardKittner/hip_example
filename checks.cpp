@@ -15,7 +15,7 @@ __global__ void latency() {
 }
 
 __global__ void timeout(int* a) {
-    for (size_t i = 0; i < 100000; i++) {
+    for (size_t i = 0; i < 1000000000; i++) {
         atomicAdd(a, 1);
     }
 }
@@ -38,24 +38,11 @@ int main(int argc, char** argv) {
         HIP_CHECK(hipStreamSynchronize(stream_1));
         float time_1;
         HIP_CHECK(hipEventElapsedTime(&time_1, start_1, end_1));
-        std::cout << "latency: " << time_1 << "ms" << std::endl;
+        std::cout << "timeout test ran for: " << time_1 << "ms" << std::endl;
     } else {
         std::cout << "The timeout test is disabled by default and should only be enabled when the GPU is not running a desktop environment" << std::endl;
         std::cout << "To enable the timeout test use the flag \"timeout\"." << std::endl;
     }
-    // int *end = 0;
-    // hipStream_t stream_1;
-    // hipStream_t stream_2;
-    // HIP_CHECK(hipStreamCreate(&stream_1));
-    // HIP_CHECK(hipStreamCreate(&stream_2));
-    // int *device_end;
-    // HIP_CHECK(hipMalloc(&device_end, sizeof(int)));
-    // hipLaunchKernelGGL(timeout, work_group_count, work_group_size, 0, stream_1, end);
-    // HIP_CHECK(hipGetLastError());
-    // *end = 1;
-    // HIP_CHECK(hipMemcpyAsync(device_end, end, sizeof(int), hipMemcpyHostToDevice, stream_2));  
-    // HIP_CHECK(hipStreamSynchronize(stream_1));
-    // HIP_CHECK(hipStreamSynchronize(stream_2));
 
     hipEvent_t start;
     hipEvent_t end;
