@@ -39,6 +39,9 @@ int main(int argc, char** argv) {
         float time_1;
         HIP_CHECK(hipEventElapsedTime(&time_1, start_1, end_1));
         std::cout << "timeout test ran for: " << time_1 << "ms" << std::endl;
+        HIP_CHECK(hipStreamDestroy(stream_1));
+        HIP_CHECK(hipEventDestroy(start_1));
+        HIP_CHECK(hipEventDestroy(end_1));
     } else {
         std::cout << "The timeout test is disabled by default and should only be enabled when the GPU is not running a desktop environment" << std::endl;
         std::cout << "To enable the timeout test use the flag \"timeout\"." << std::endl;
@@ -58,4 +61,7 @@ int main(int argc, char** argv) {
     float time;
     HIP_CHECK(hipEventElapsedTime(&time, start, end));
     std::cout << "latency: " << time << "ms" << std::endl;
+    HIP_CHECK(hipStreamDestroy(stream));
+    HIP_CHECK(hipEventDestroy(start));
+    HIP_CHECK(hipEventDestroy(end));
 }
