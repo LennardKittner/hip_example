@@ -19,8 +19,9 @@ namespace fs = std::filesystem;
 }
 
 #define HIP_PASS_ON(command) {                                                                                \
-    if (command != hipSuccess) {                                                                              \
-        return command;                                                                                       \
+    hipError_t status = command;                                                                              \
+    if (status != hipSuccess) {                                                                               \
+        return status;                                                                                        \
     }                                                                                                         \
 }
 
@@ -166,7 +167,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    size_t to_size = fs::file_size(to);
+    size_t to_size = 0;
     if (argc >= 3) {
         to_size = std::strtoul(argv[2], nullptr, 10);
     } else {
@@ -190,7 +191,9 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    HIP_CHECK(hipHostRegister(to_mapping, to_size, 0)); //0x02
+    std::cerr << "errno" << strerror(errno) << std::endl;
+    HIP_CHECK(hipHostRegister(to_mapping, to_size, 0)); //0x02 causes errno = operation not permitted
+    std::cerr << "errno" << strerror(errno) << std::endl;
     HIP_CHECK(hipHostGetDevicePointer(&gpu_mapping, to_mapping, 0));
 
     std::cout << "device: " << gpu_mapping << std::endl;
@@ -200,7 +203,7 @@ int main(int argc, char **argv) {
 
     // execute memset
     Memset_cmdlist* cmd;
-    HIP_CHECK(hipHostMalloc(&cmd, sizeof(Memset_cmdlist)));
+    HIP_CHECK(hipHostMalloc(&cmd, sizeof(Memset_cmdlist))); // << allocates 4kb
     *cmd = Memset_cmdlist(to_size, 4, 64, 0xabcdef12);
     size_t *to_mapping_gpu = static_cast<size_t*>(gpu_mapping);
 
@@ -226,8 +229,8 @@ int main(int argc, char **argv) {
     HIP_CHECK(hipStreamDestroy(main_stream_2));
     HIP_CHECK(hipHostDestroy(cmd));
     HIP_CHECK(hipHostUnregister(to_mapping));
-    if (!munmap(to_mapping, to_size)) {
+    if (munmap(to_mapping, to_size)) {
         std::cerr << "Failed to munmap: " << strerror(errno) << std::endl;
-    } //TODO:   Operation not permitted. Why?
+    }
     return 0;
 }
