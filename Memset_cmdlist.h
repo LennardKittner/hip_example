@@ -13,9 +13,9 @@ struct Memset_cmdlist {
     Memset_cmdlist *device_pointer;
 
     Memset_cmdlist(size_t size, size_t num_groups, size_t num_lanes_per_group, size_t pattern);
-    
-    hipError_t memset(size_t *to, hipStream_t *stream);
-    hipError_t destroy();
+    ~Memset_cmdlist();
+
+    hipError_t memset(size_t *to, hipStream_t stream);
 };
 
 #endif
