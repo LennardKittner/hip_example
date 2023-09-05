@@ -28,8 +28,11 @@ rm -rf build && cmake -B build && cmake --build build && ./build/hip_example
 
 The environment variables in the environment_nvidia file can help to solve some issues but you should first try to build **without** them.
 
+### Intellisense
+The cmake file generates a compilation database, which can be used for Intellisense with [clangd](https://clangd.llvm.org/).
+
 ## Executables
-This repository includes two test executables `memory` and `hip_example`.
+This repository includes tree test executables `memory` `checks` and `hip_example`.
 
 ## Useful Information About HIP
 
