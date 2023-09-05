@@ -26,6 +26,9 @@ else()
   find_package(hip)
 endif()
 
+# Can be used with clangd
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 # Set compilation standard
 set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
 set(CMAKE_CXX_LINKER   ${HIP_HIPCC_EXECUTABLE})
