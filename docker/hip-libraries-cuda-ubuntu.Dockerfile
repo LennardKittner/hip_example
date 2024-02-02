@@ -1,4 +1,4 @@
-# Source: https://github.com/amd/rocm-examples/blob/develop/Dockerfiles/hip-libraries-cuda-ubuntu.Dockerfile
+# Based on: https://github.com/amd/rocm-examples/blob/develop/Dockerfiles/hip-libraries-cuda-ubuntu.Dockerfile
 # CUDA based docker image
 FROM nvidia/cuda:11.6.2-devel-ubuntu20.04
 

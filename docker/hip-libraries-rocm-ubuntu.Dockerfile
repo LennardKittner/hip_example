@@ -1,6 +1,6 @@
-# Source: https://github.com/amd/rocm-examples/blob/develop/Dockerfiles/hip-libraries-cuda-ubuntu.Dockerfile
+# Based on: https://github.com/amd/rocm-examples/blob/develop/Dockerfiles/hip-libraries-rocm-ubuntu.Dockerfile
 # Ubuntu based docker image
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # Base packages that are required for the installation
 RUN export DEBIAN_FRONTEND=noninteractive; \
@@ -27,10 +27,10 @@ ENV LANG en_US.utf8
 
 # Install ROCM HIP and libraries using the installer script
 RUN export DEBIAN_FRONTEND=noninteractive; \
-    wget https://repo.radeon.com/amdgpu-install/5.3/ubuntu/focal/amdgpu-install_5.3.50300-1_all.deb \
+    wget https://repo.radeon.com/amdgpu-install/6.0/ubuntu/jammy/amdgpu-install_6.0.60000-1_all.deb \
     && apt-get update -qq \
-    && apt-get install -y ./amdgpu-install_5.3.50300-1_all.deb \
-    && rm ./amdgpu-install_5.3.50300-1_all.deb \
+    && apt-get install -y ./amdgpu-install_6.0.60000-1_all.deb \
+    && rm ./amdgpu-install_6.0.60000-1_all.deb \
     && amdgpu-install -y --usecase=rocm --no-dkms \
     && apt-get install -y libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
