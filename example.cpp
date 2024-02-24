@@ -9,7 +9,17 @@
     }                                                                                   \
 }                                                                                       \
 
+__host__ __device__ void test() {
+#ifdef __HIP_DEVICE_COMPILE__ 
+    if (threadIdx.x + blockIdx.x * blockDim.x == 0)
+        printf("test_d\n");
+#else
+    printf("test_h\n");
+#endif
+}
+
 __global__ void my_kernel(int N, double *d_a) {
+    test();
     int i = threadIdx.x + blockIdx.x * blockDim.x;
      if (i < N) {
         d_a[i] *= 2;
@@ -17,6 +27,7 @@ __global__ void my_kernel(int N, double *d_a) {
 }
 
 int main() {
+    test();
     int N = 1000;
     size_t buffer_size = N*sizeof(double);
     double *h_a = (double*) malloc(buffer_size);
