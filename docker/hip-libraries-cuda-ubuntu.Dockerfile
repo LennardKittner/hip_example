@@ -1,6 +1,6 @@
 # Based on: https://github.com/amd/rocm-examples/blob/develop/Dockerfiles/hip-libraries-cuda-ubuntu.Dockerfile
 # CUDA based docker image
-FROM nvidia/cuda:11.6.2-devel-ubuntu20.04
+FROM nvidia/cuda:12.3.1-devel-ubuntu22.04
 
 # Base packages that are required for the installation
 RUN export DEBIAN_FRONTEND=noninteractive; \
@@ -22,19 +22,17 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     gfortran \
     vim \
     nano \
-    # Nvidia driver version needed for hipSOLVER's CUDA backend.
-    # See https://docs.nvidia.com/deploy/cuda-compatibility/index.html#default-to-minor-version.
-    nvidia-driver-455 \
+    libfile-basedir-perl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install HIP using the installer script
 RUN export DEBIAN_FRONTEND=noninteractive; \
     wget -q -O - https://repo.radeon.com/rocm/rocm.gpg.key | apt-key add - \
-    && echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/5.3/ ubuntu main' > /etc/apt/sources.list.d/rocm.list \
+    && echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.0/ ubuntu main' > /etc/apt/sources.list.d/rocm.list \
     && apt-get update -qq \
-    && apt-get install -y hip-base hipify-clang \
-    && apt-get download hip-runtime-nvidia hip-dev \
-    && dpkg -i --ignore-depends=cuda hip*
+    && apt-get install -y hip-base hipify-clang rocm-llvm \
+    && apt-get download hip-runtime-nvidia hip-dev hipcc \
+    && dpkg -i hip*
 
 # Install CMake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.21.7/cmake-3.21.7-linux-x86_64.sh \
@@ -46,3 +44,5 @@ ENV PATH="/cmake/bin:/opt/rocm/bin:${PATH}"
 
 RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
     && ldconfig
+
+ENV HIP_PLATFORM=nvidia

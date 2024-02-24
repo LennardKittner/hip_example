@@ -23,10 +23,6 @@ When creating a new container you have to pass through the gpu this is done usin
 docker run -it --gpus all --name hip_docker --network host hip_nvidia /bin/bash
 ```
 
-## Limitations
-
-At the moment, there is an issue with dependencies that is hindering installations through `apt`. If you require any extra software, it is best to install it at the start of the docker file.
-
 # AMD
 
 ## Prerequisites
