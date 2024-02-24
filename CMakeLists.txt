@@ -1,8 +1,11 @@
-# Source: https://www.reddit.com/r/ROCm/comments/12bmygw/how_do_you_build_apps_with_hipblas_using_cmake/
-cmake_minimum_required(VERSION 3.16)
+# Inspired by: https://www.reddit.com/r/ROCm/comments/12bmygw/how_do_you_build_apps_with_hipblas_using_cmake/
+cmake_minimum_required(VERSION 3.21.7)
 
 project(hip_example VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_BUILD_TYPE "Debug")
+
+set(CMAKE_MODULE_PATH "/opt/rocm-6.0.0/lib/cmake/hip")
+message("CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
 
 # Find Modules
 if (NOT DEFINED ROCM_PATH)
@@ -20,7 +23,7 @@ endif()
 
 # Find hip
 if(${HIP_PLATFORM} MATCHES "nvidia")
-  set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake")
+  set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};/opt/rocm/hip/cmake")
   find_package(HIP MODULE REQUIRED)
 else()
   find_package(hip)
@@ -32,7 +35,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Set compilation standard
 set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
 set(CMAKE_CXX_LINKER   ${HIP_HIPCC_EXECUTABLE})
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -43,38 +46,44 @@ if(${HIP_PLATFORM} MATCHES "nvidia")
   set(CMAKE_CUDA_ARCHITECTURES "70;75")
 endif()
 
-# Basic test programm
-add_executable(hip_example example.cpp)
-message("env is ${HIP_PLATFORM}")
+# Checks timeout and latency
+add_executable(checks checks.cpp)
 if(${HIP_PLATFORM} MATCHES "nvidia")
   message(STATUS "link to CUDA::cudart")
-  target_compile_definitions(hip_example PRIVATE __HIP_PLATFORM_NVIDIA__)
-  target_link_libraries(hip_example PRIVATE CUDA::cudart)
+  set(CMAKE_EXE_LINKER_FLAGS "")
+  target_compile_definitions(checks PRIVATE __HIP_PLATFORM_NVIDIA__)
 else()
   message(STATUS "link to hip::device")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fgpu-rdc -Wno-deprecated-register")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fgpu-rdc -Wno-deprecated-register")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fgpu-rdc --hip-link")
+  target_link_libraries(checks hip::host)
+endif()
+
+# Basic example
+add_executable(hip_example example.cpp)
+if(${HIP_PLATFORM} MATCHES "nvidia")
+  message(STATUS "link to CUDA::cudart")
+  set(CMAKE_EXE_LINKER_FLAGS "")
+  target_compile_definitions(hip_example PRIVATE __HIP_PLATFORM_NVIDIA__)
+else()
+  message(STATUS "link to hip::device")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fgpu-rdc -Wno-deprecated-register")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fgpu-rdc -Wno-deprecated-register")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fgpu-rdc --hip-link")
   target_link_libraries(hip_example hip::host)
 endif()
 
 # Memmory mapped file test
 add_executable(memory memory.cpp)
-message("env is ${HIP_PLATFORM}")
 if(${HIP_PLATFORM} MATCHES "nvidia")
   message(STATUS "link to CUDA::cudart")
+  set(CMAKE_EXE_LINKER_FLAGS "")
   target_compile_definitions(memory PRIVATE __HIP_PLATFORM_NVIDIA__)
-  target_link_libraries(memory PRIVATE CUDA::cudart)
 else()
   message(STATUS "link to hip::device")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fgpu-rdc -Wno-deprecated-register")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fgpu-rdc -Wno-deprecated-register")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fgpu-rdc --hip-link")
   target_link_libraries(memory hip::host)
-endif()
-
-# Checks timeout and latency
-add_executable(checks checks.cpp)
-message("env is ${HIP_PLATFORM}")
-if(${HIP_PLATFORM} MATCHES "nvidia")
-  message(STATUS "link to CUDA::cudart")
-  target_compile_definitions(hip_example PRIVATE __HIP_PLATFORM_NVIDIA__)
-  target_link_libraries(hip_example PRIVATE CUDA::cudart)
-else()
-  message(STATUS "link to hip::device")
-  target_link_libraries(hip_example hip::host)
 endif()
