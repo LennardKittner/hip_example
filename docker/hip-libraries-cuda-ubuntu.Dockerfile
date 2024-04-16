@@ -46,3 +46,11 @@ RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
     && ldconfig
 
 ENV HIP_PLATFORM=nvidia
+
+RUN git clone https://github.com/google/googletest.git -b v1.14.0 \
+    && cd googletest \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make \
+    && make install
