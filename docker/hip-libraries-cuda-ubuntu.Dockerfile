@@ -47,8 +47,11 @@ RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
 
 ENV HIP_PLATFORM=nvidia
 
-RUN git clone https://github.com/google/googletest.git -b v1.14.0 \
-    && cd googletest \
+RUN git clone https://github.com/google/googletest.git -b v1.14.0
+# Patch google test to work with nvcc https://github.com/google/googletest/issues/4104
+COPY gtest.patch /googletest/
+RUN cd googletest && git apply gtest.patch
+RUN cd googletest \
     && mkdir build \
     && cd build \
     && cmake .. \

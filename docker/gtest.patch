@@ -1,0 +1,15 @@
+iff --git a/googletest/include/gtest/internal/gtest-internal.h b/googletest/include/gtest/internal/gtest-internal.h
+index a04a9201..2b6d92da 100644
+--- a/googletest/include/gtest/internal/gtest-internal.h
++++ b/googletest/include/gtest/internal/gtest-internal.h
+@@ -1539,8 +1539,9 @@ class NeverThrown {
+         GTEST_TEST_CLASS_NAME_(test_suite_name,                                \
+                                test_name) &&) noexcept = delete; /* NOLINT */  \
+                                                                                \
+-   private:                                                                    \
++                                                                               \
+     void TestBody() override;                                                  \
++   private:                                                                    \
+     static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;      \
+   };                                                                           \
+                                                                                \
