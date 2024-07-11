@@ -2,7 +2,7 @@
 
 A simple hip example programm.
 
-## Manuel Building
+## Manual Building
 
 ```
 hipcc -o hip_example main.cpp
@@ -26,7 +26,7 @@ or
 rm -rf build && cmake -B build && cmake --build build && ./build/hip_example
 ```
 
-The environment variables in the environment_nvidia file can help to solve some issues but you should first try to build **without** them.
+The environment variables in the `environment_nvidia` file can help to solve some issues but you should first try to build **without** them.
 
 ### Intellisense
 The cmake file generates a compilation database, which can be used for Intellisense with [clangd](https://clangd.llvm.org/).
