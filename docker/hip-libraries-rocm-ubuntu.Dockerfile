@@ -28,10 +28,10 @@ ENV LANG en_US.utf8
 
 # Install ROCM HIP and libraries using the installer script
 RUN export DEBIAN_FRONTEND=noninteractive; \
-    wget https://repo.radeon.com/amdgpu-install/6.0/ubuntu/jammy/amdgpu-install_6.0.60000-1_all.deb \
+    wget https://repo.radeon.com/amdgpu-install/6.1.2/ubuntu/jammy/amdgpu-install_6.1.60102-1_all.deb \
     && apt-get update -qq \
-    && apt-get install -y ./amdgpu-install_6.0.60000-1_all.deb \
-    && rm ./amdgpu-install_6.0.60000-1_all.deb \
+    && apt-get install -y ./amdgpu-install_6.1.60102-1_all.deb \
+    && rm ./amdgpu-install_6.1.60102-1_all.deb \
     && amdgpu-install -y --usecase=rocm --no-dkms \
     && apt-get install -y libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
