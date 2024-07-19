@@ -21,6 +21,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     libglfw3-dev \
     vim \
     nano \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LANG en_US.utf8
@@ -34,12 +35,6 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     && amdgpu-install -y --usecase=rocm --no-dkms \
     && apt-get install -y libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Install CMake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.21.7/cmake-3.21.7-linux-x86_64.sh \
-    && mkdir /cmake \
-    && sh cmake-3.21.7-linux-x86_64.sh --skip-license --prefix=/cmake \
-    && rm cmake-3.21.7-linux-x86_64.sh
 
 ENV PATH="/cmake/bin:/opt/rocm/bin:${PATH}"
 
