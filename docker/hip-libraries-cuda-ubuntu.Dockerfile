@@ -29,7 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
 # Install HIP using the installer script
 RUN export DEBIAN_FRONTEND=noninteractive; \
     wget -q -O - https://repo.radeon.com/rocm/rocm.gpg.key | apt-key add - \
-    && echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.0/ ubuntu main' > /etc/apt/sources.list.d/rocm.list \
+    && echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.1/ ubuntu main' > /etc/apt/sources.list.d/rocm.list \
     && apt-get update -qq \
     && apt-get install -y hip-base hipify-clang rocm-llvm \
     && apt-get download hip-runtime-nvidia hip-dev hipcc \
