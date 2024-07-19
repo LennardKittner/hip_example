@@ -36,7 +36,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     && apt-get install -y libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH="/cmake/bin:/opt/rocm/bin:${PATH}"
+ENV PATH="/opt/rocm/bin:${PATH}"
 
 RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
     && ldconfig
