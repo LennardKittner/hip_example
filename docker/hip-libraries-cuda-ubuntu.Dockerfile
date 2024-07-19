@@ -22,6 +22,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     gfortran \
     vim \
     nano \
+    cmake \
     libfile-basedir-perl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,13 +35,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     && apt-get download hip-runtime-nvidia hip-dev hipcc \
     && dpkg -i hip*
 
-# Install CMake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.21.7/cmake-3.21.7-linux-x86_64.sh \
-    && mkdir /cmake \
-    && sh cmake-3.21.7-linux-x86_64.sh --skip-license --prefix=/cmake \
-    && rm cmake-3.21.7-linux-x86_64.sh
-
-ENV PATH="/cmake/bin:/opt/rocm/bin:${PATH}"
+ENV PATH="/opt/rocm/bin:${PATH}"
 
 RUN echo "/opt/rocm/lib" >> /etc/ld.so.conf.d/rocm.conf \
     && ldconfig
